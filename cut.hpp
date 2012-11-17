@@ -68,7 +68,7 @@ public:
     std::vector<TExtractInfo*> extracts;
 
 
-    TExtractInfo *addExtract(std::string name, double minlon, double minlat, double maxlon, double maxlat) {
+    TExtractInfo *addExtract(std::string name, time_t timestamp, double minlon, double minlat, double maxlon, double maxlat) {
         fprintf(stderr, "opening writer for %s\n", name.c_str());
         Osmium::OSMFile outfile(name);
         Osmium::Output::Base *writer = Osmium::Output::Factory::instance().create_output(outfile);
@@ -80,6 +80,7 @@ public:
         bounds.extend(min).extend(max);
 
         Osmium::OSM::Meta meta(bounds);
+        meta.timestamp(timestamp);
         writer->init(meta);
 
         TExtractInfo *ex = new TExtractInfo(name);
@@ -91,7 +92,7 @@ public:
         return ex;
     }
 
-    TExtractInfo *addExtract(std::string name, geos::geom::Geometry *poly) {
+    TExtractInfo *addExtract(std::string name, time_t timestamp, geos::geom::Geometry *poly) {
         fprintf(stderr, "opening writer for %s\n", name.c_str());
         Osmium::OSMFile outfile(name);
         Osmium::Output::Base *writer = Osmium::Output::Factory::instance().create_output(outfile);
@@ -104,6 +105,7 @@ public:
         bounds.extend(min).extend(max);
 
         Osmium::OSM::Meta meta(bounds);
+        meta.timestamp(timestamp);
         writer->init(meta);
 
         TExtractInfo *ex = new TExtractInfo(name);
