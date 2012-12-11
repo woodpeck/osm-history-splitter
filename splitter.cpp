@@ -20,24 +20,28 @@
 #include "softcut.hpp"
 #include "hardcut.hpp"
 
-template <class TExtractInfo> bool readConfig(char *conffile, time_t timestamp, CutInfo<TExtractInfo> &info);
+template <class TExtractInfo> bool readConfig(char *conffile, time_t *timestamp, uint64_t *sequenceno, char *baseurl, CutInfo<TExtractInfo> &info);
 
 int main(int argc, char *argv[]) {
     bool softcut = true;
     bool debug = false;
     char *filename, *conffile;
-    time_t timestamp = 0;
+    time_t *timestamp = 0;
+    uint64_t *sequenceno = 0;
+    char *baseurl = NULL;
 
     static struct option long_options[] = {
         {"debug",               no_argument, 0, 'd'},
         {"softcut",             no_argument, 0, 's'},
         {"hardcut",             no_argument, 0, 'h'},
-        {"timestamp",           required_argument, 0, 't'},
+        {"replication-timestamp",  required_argument, 0, 't'},
+        {"replication-sequence",   required_argument, 0, 'n'},
+        {"replication-url",        required_argument, 0, 'u'},
         {0, 0, 0, 0}
     };
 
     while (1) {
-        int c = getopt_long(argc, argv, "dsht:", long_options, 0);
+        int c = getopt_long(argc, argv, "dsht:n:u:", long_options, 0);
         if (c == -1)
             break;
 
@@ -52,7 +56,13 @@ int main(int argc, char *argv[]) {
                 softcut = false;
                 break;
             case 't':
-                timestamp = atoi(optarg);
+                timestamp = new time_t(atoi(optarg));
+                break;
+            case 'n':
+                sequenceno = new uint64_t(atoi(optarg));
+                break;
+            case 'u':
+                baseurl = optarg;
                 break;
         }
     }
@@ -65,16 +75,16 @@ int main(int argc, char *argv[]) {
     filename = argv[optind];
     conffile = argv[optind+1];
 
-    if(softcut & !strcmp(filename, "-")) {
+    if (softcut & !strcmp(filename, "-")) {
         fprintf(stderr, "Can't read from stdin when in softcut\n");
         return 1;
     }
 
     Osmium::OSMFile infile(filename);
 
-    if(softcut) {
+    if (softcut) {
         SoftcutInfo info;
-        if(!readConfig(conffile, timestamp, info))
+        if (!readConfig(conffile, timestamp, sequenceno, baseurl, info))
         {
             fprintf(stderr, "error reading config\n");
             return 1;
@@ -89,7 +99,7 @@ int main(int argc, char *argv[]) {
         Osmium::Input::read(infile, two);
     } else {
         HardcutInfo info;
-        if(!readConfig(conffile, timestamp, info))
+        if (!readConfig(conffile, timestamp, sequenceno, baseurl, info))
         {
             fprintf(stderr, "error reading config\n");
             return 1;
@@ -103,7 +113,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-template <class TExtractInfo> bool readConfig(char *conffile, time_t timestamp, CutInfo<TExtractInfo> &info) {
+template <class TExtractInfo> bool readConfig(char *conffile, time_t *timestamp, uint64_t *sequenceno, char *baseurl, CutInfo<TExtractInfo> &info) {
     const int linelen = 4096;
 
     FILE *fp = fopen(conffile, "r");
@@ -150,7 +160,7 @@ template <class TExtractInfo> bool readConfig(char *conffile, time_t timestamp, 
                     switch(type) {
                         case 'b':
                             if(4 == sscanf(tok, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat)) {
-                                info.addExtract(name, timestamp, minlat, minlon, maxlat, maxlon);
+                                info.addExtract(name, timestamp, sequenceno, baseurl, minlat, minlon, maxlat, maxlon);
                             } else {
                                 fprintf(stderr, "error reading BBOX %s for %s\n", tok, name);
                                 return false;
@@ -163,7 +173,7 @@ template <class TExtractInfo> bool readConfig(char *conffile, time_t timestamp, 
                                     fprintf(stderr, "error creating geometry from poly-file %s for %s\n", file, name);
                                     break;
                                 }
-                                info.addExtract(name, timestamp, geom);
+                                info.addExtract(name, timestamp, sequenceno, baseurl, geom);
                             }
                             break;
                         case 'o':
@@ -173,7 +183,7 @@ template <class TExtractInfo> bool readConfig(char *conffile, time_t timestamp, 
                                     fprintf(stderr, "error creating geometry from poly-file %s for %s\n", file, name);
                                     break;
                                 }
-                                info.addExtract(name, timestamp, geom);
+                                info.addExtract(name, timestamp, sequenceno, baseurl, geom);
                             }
                             break;
                     }

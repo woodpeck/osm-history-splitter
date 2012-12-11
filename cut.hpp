@@ -68,7 +68,8 @@ public:
     std::vector<TExtractInfo*> extracts;
 
 
-    TExtractInfo *addExtract(std::string name, time_t timestamp, double minlon, double minlat, double maxlon, double maxlat) {
+    TExtractInfo *addExtract(std::string name, time_t *timestamp, uint64_t *sequence, std::string baseurl, 
+        double minlon, double minlat, double maxlon, double maxlat) {
         fprintf(stderr, "opening writer for %s\n", name.c_str());
         Osmium::OSMFile outfile(name);
         Osmium::Output::Base *writer = Osmium::Output::Factory::instance().create_output(outfile);
@@ -80,7 +81,9 @@ public:
         bounds.extend(min).extend(max);
 
         Osmium::OSM::Meta meta(bounds);
-        meta.timestamp(timestamp);
+        if (timestamp) meta.osmosis_replication_timestamp(*timestamp);
+        if (sequence) meta.osmosis_replication_sequence_number(*sequence);
+        if (baseurl.length()) meta.osmosis_replication_base_url(baseurl);
         writer->init(meta);
 
         TExtractInfo *ex = new TExtractInfo(name);
@@ -92,7 +95,8 @@ public:
         return ex;
     }
 
-    TExtractInfo *addExtract(std::string name, time_t timestamp, geos::geom::Geometry *poly) {
+    TExtractInfo *addExtract(std::string name, time_t *timestamp, uint64_t *sequence, std::string baseurl, 
+        geos::geom::Geometry *poly) {
         fprintf(stderr, "opening writer for %s\n", name.c_str());
         Osmium::OSMFile outfile(name);
         Osmium::Output::Base *writer = Osmium::Output::Factory::instance().create_output(outfile);
@@ -105,7 +109,9 @@ public:
         bounds.extend(min).extend(max);
 
         Osmium::OSM::Meta meta(bounds);
-        meta.timestamp(timestamp);
+        if (timestamp) meta.osmosis_replication_timestamp(*timestamp);
+        if (sequence) meta.osmosis_replication_sequence_number(*sequence);
+        if (baseurl.length()) meta.osmosis_replication_base_url(baseurl);
         writer->init(meta);
 
         TExtractInfo *ex = new TExtractInfo(name);
